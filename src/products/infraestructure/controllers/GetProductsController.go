@@ -2,24 +2,36 @@ package infraestructure
 
 import (
 	"demo/src/products/application"
+	"demo/src/products/domain/entities"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-type GetProductsController struct {
-	useCase_gp *application.GetProducts
+type GetRecentProductsController struct {
+	gp application.GetProducts
+	lastCheck time.Time
 }
 
-func NewGetProductsController(useCase_gp *application.GetProducts) *GetProductsController {
-	return &GetProductsController{useCase_gp: useCase_gp}
+func NewGetRecentProductsController(gp application.GetProducts) *GetRecentProductsController {
+	return &GetRecentProductsController{gp: gp, lastCheck: time.Now()}
 }
 
-func (gpc *GetProductsController) Execute(c *gin.Context) {
-	products, err := gpc.useCase_gp.Execute()
+func (rpc *GetRecentProductsController) Execute(c *gin.Context) {
+	products, err := rpc.gp.Execute()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch products"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get products"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"products": products})
+
+	var recentProducts []entities.Product
+	for _, p := range products {
+		if time.Now().Sub(rpc.lastCheck) < 30*time.Second {
+			recentProducts = append(recentProducts, p)
+		}
+	}
+
+	rpc.lastCheck = time.Now()
+	c.JSON(http.StatusOK, gin.H{"Products": recentProducts})
 }
