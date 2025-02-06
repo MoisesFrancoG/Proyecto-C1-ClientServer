@@ -15,10 +15,11 @@ type CreateProductRequest struct {
 
 type CreateProductController struct {
 	cp application.CreateProduct
+	lp *LongPollingController
 }
 
-func NewCreateProductController(cp application.CreateProduct) *CreateProductController {
-	return &CreateProductController{cp: cp}
+func NewCreateProductController(cp application.CreateProduct, lp *LongPollingController) *CreateProductController {
+	return &CreateProductController{cp: cp, lp: lp}
 }
 
 func (cp_c *CreateProductController) Execute(c *gin.Context) {
@@ -39,6 +40,9 @@ func (cp_c *CreateProductController) Execute(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create product"})
 		return
 	}
+
+	// Notificar a los clientes esperando nuevos productos
+	cp_c.lp.NotifyNewProduct()
 
 	c.JSON(http.StatusOK, gin.H{"message": "Product created successfully", "product": product})
 }
