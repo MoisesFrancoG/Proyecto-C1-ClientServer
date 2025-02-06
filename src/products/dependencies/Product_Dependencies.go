@@ -20,15 +20,17 @@ func NewProductDependencies(db *sql.DB) *ProductDependencies {
 
 func (pd *ProductDependencies) Execute(r *gin.Engine) {
 	productRepo := repositories.NewProductRepository(pd.DB)
-
+	lpController := infraestructure.NewLongPollingController(*application.NewGetProducts(productRepo))
 	createProductCase := application.NewCreateProduct(productRepo)
-	createProductController := infraestructure.NewCreateProductController(createProductCase)
+	createProductController := infraestructure.NewCreateProductController(createProductCase, lpController)
 
 	deleteProductCase := application.NewDeleteProduct(productRepo)
 	deleteProductController := infraestructure.NewDeleteProductController(deleteProductCase)
 
 	getAllProductsCase := application.NewGetProducts(productRepo)
-	getAllProductsController := infraestructure.NewGetProductsController(getAllProductsCase)
+
+	getAllProductsController := infraestructure.NewGetRecentProductsController(*getAllProductsCase)
+	getUpdatedProducts := infraestructure.NewGetUpdatedPricesController(*getAllProductsCase)
 
 	updatedProductCase := application.NewUpdateProduct(productRepo)
 	updatedProductController := infraestructure.NewUpdateProductController(updatedProductCase)
@@ -37,6 +39,6 @@ func (pd *ProductDependencies) Execute(r *gin.Engine) {
 	getByIdController := infraestructure.NewGetProductByIdController(getByIdCase)
 
 
-	productRoutes := routes.NewProductRoutes(createProductController, getAllProductsController, updatedProductController, deleteProductController, getByIdController)
+	productRoutes := routes.NewProductRoutes(createProductController, getAllProductsController, updatedProductController, deleteProductController, getByIdController, getUpdatedProducts,lpController)
 	productRoutes.SetupRoutes(r)
 }
